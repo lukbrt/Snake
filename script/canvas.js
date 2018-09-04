@@ -1,22 +1,34 @@
-const intervalPeriod = 150, //period in ms
+const INTERVAL_PERIOD = 150, //period in ms
       SIDE_SIZE = 10;
 
-let board = Array(10).fill(0).map(x => Array(10).fill(0));
+let board = Array(SIDE_SIZE).fill(0).map(x => Array(SIDE_SIZE).fill(0));
 
 let snake = {
     lastDirection: 39, //right
-    body: [new Point(0, 0), new Point(1, 0), new Point(2, 0), new Point(3, 0), new Point(4, 0)], //new Array()
+    body: [new Point(0, 0), new Point(1, 0)], //new Array()      , new Point(2, 0), new Point(3, 0), new Point(4, 0)
     head: 0,
-    tail: 0
+    tail: 0,
+    intersectSet: new Set()
+};
+
+let apple = {
+    position: randomizeApplePoint()
 };
 
 let gameOver = false;
 
 snake.head = snake.body[snake.body.length - 1];
 snake.tail = snake.body[0];
+for (let i = 0; i < 4; i++)
+{
+    board[0][i] = 1;
+}
+
+// TEST **********
 console.log("snake.head" + snake.head.x + "   " + snake.head.y);
 console.log("snake.tail" + snake.tail.x + "   " + snake.tail.y);
 console.log("snake.body[0]" + snake.body[0].x + "   " + snake.body[0].y);
+//**************** */
 
 function Point(x, y) 
 {
@@ -43,7 +55,8 @@ window.onload = function()
 
     let iterator = this.setInterval(() => {
 
-        let newPoint = new Point(snake.head.x, snake.head.y);
+        let newPoint = new Point(snake.head.x, snake.head.y),
+            removedPoint;
 
         switch(snake.lastDirection)
         {
@@ -64,7 +77,8 @@ window.onload = function()
             break;
         }
 
-        if (newPoint.x >= SIDE_SIZE || newPoint.x < 0 || newPoint.y < 0 || newPoint.y >= SIDE_SIZE)
+        if (newPoint.x >= SIDE_SIZE || newPoint.x < 0 || newPoint.y < 0 || 
+            newPoint.y >= SIDE_SIZE || checkIntersect())
         {
             this.clearInterval(iterator);
             console.log('........end--->WALL..........');
@@ -77,15 +91,106 @@ window.onload = function()
             // }
             // alert(test);
         // 
+
+        //move snake****
         snake.body.push(newPoint); //snake.head
+        board[newPoint.y][newPoint.x] = 1;
         snake.head = newPoint;
-        snake.body.shift();
-        if (snake.body.length > 0)
-            snake.tail = snake.body[0];
+        removedPoint = snake.body.shift();
+        board[removedPoint.y][removedPoint.x] = 0;
+        //************ */
+
+        if (isEquivalent(snake.head, apple.position))
+        {
+            board[apple.position.y][apple.position.x] = 0;
+            apple.position = randomizeApplePoint();
+            let tail = snake.body[0];
+            switch (snake.lastDirection) 
+            {
+                case 39: //right
+                    if (tail.x > 0)
+                    {
+                        snake.body.unshift(new Point(tail.x - 1, tail.y));
+                    }
+                    else if (tail.y > 0 && board[tail.y - 1][tail.x] === 0)
+                    {
+                        snake.body.unshift(new Point(tail.x, tail.y - 1));
+                    }
+                    else if (tail.y == 0 && board[tail.y + 1][tail.x] === 0)
+                    {
+                        snake.body.unshift(new Point(tail.x, tail.y + 1));
+                    }
+                    else
+                    {
+                        gameOver = true;
+                    }
+                    break;
+
+                case 37: //left
+                    if (tail.x < SIDE_SIZE - 1) 
+                    {
+                        snake.body.unshift(new Point(tail.x + 1, tail.y));
+                    }
+                    else if (tail.y > 0 && board[tail.y - 1][tail.x] === 0) 
+                    {
+                        snake.body.unshift(new Point(tail.x, tail.y - 1));
+                    }
+                    else if (tail.y == 0 && board[tail.y + 1][tail.x] === 0) 
+                    {
+                        snake.body.unshift(new Point(tail.x, tail.y + 1));
+                    }
+                    else 
+                    {
+                        gameOver = true;
+                    }
+                    break;
+
+                case 38: //up
+                    if (tail.y < SIDE_SIZE - 1) 
+                    {
+                        snake.body.unshift(new Point(tail.x, tail.y + 1));
+                    }
+                    else if (tail.x > 0 && board[tail.y][tail.x - 1] === 0) 
+                    {
+                        snake.body.unshift(new Point(tail.x - 1, tail.y));
+                    }
+                    else if (tail.x == 0 && board[tail.y][tail.x + 1] === 0) 
+                    {
+                        snake.body.unshift(new Point(tail.x + 1, tail.y));
+                    }
+                    else 
+                    {
+                        gameOver = true;
+                    }
+                    break;
+
+                case 40: //down
+                    if (tail.y > 0) 
+                    {
+                        snake.body.unshift(new Point(tail.x, tail.y - 1));
+                    }
+                    else if (tail.x > 0 && board[tail.y][tail.x - 1] === 0) 
+                    {
+                        snake.body.unshift(new Point(tail.x - 1, tail.y));
+                    }
+                    else if (tail.x == 0 && board[tail.y][tail.x + 1] === 0) 
+                    {
+                        snake.body.unshift(new Point(tail.x + 1, tail.y));
+                    }
+                    else 
+                    {
+                        gameOver = true;
+                    }
+                    break;
+            }
+            
+        }
+        // if (snake.body.length > 0)
+        //     snake.tail = snake.body[0];
         //***************** */
 
         draw();
-    }, intervalPeriod);
+    }, INTERVAL_PERIOD);
 
     function draw()
     {
@@ -124,6 +229,14 @@ window.onload = function()
             }
         }
 
+        //***draw apple */
+        context.fillStyle = 'red';
+        context.beginPath();
+        context.arc(apple.position.x * 50 + 25, apple.position.y * 50 + 25, 25, 0, Math.PI * 2);
+        context.fill();
+        
+        //************* */
+
         context.fillStyle = 'black';
         for (let i = 0; i < snake.body.length; i++)
         {
@@ -134,4 +247,70 @@ window.onload = function()
         }
     }
     
+}
+
+function isEquivalent(a, b)
+{
+    let aProps = Object.getOwnPropertyNames(a);
+    let bProps = Object.getOwnPropertyNames(b);
+
+    if (aProps.length != bProps.length)
+        return false;
+
+    for (let i = 0; i < aProps.length; i++)
+    {
+        let propName = aProps[i];
+
+        if (a[propName] !== b[propName])
+            return false;
+    }
+
+    return true;
+}
+
+function checkIntersect()
+{
+    for (let i = 0; i < snake.body.length - 1; i++)
+    {
+        if (isEquivalent(snake.head, snake.body[i]))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+// function randomizeApple()
+// {
+//     let iRandom = randomize(),
+//         jRandom = randomize();
+
+//     while (!board[iRandom][jRandom])
+//     {
+//         iRandom = randomize();
+//         jRandom = randomize();
+//     }
+
+//     board[iRandom][jRandom] = 1;
+// }
+
+function randomizeApplePoint() 
+{
+    let yRandom = randomize(),
+        xRandom = randomize();
+    // console.log(xRandom + "    ,  " + yRandom);
+    while (board[yRandom][xRandom] !== 0) 
+    {
+        yRandom = randomize();
+        xRandom = randomize();
+    }
+
+    board[yRandom][xRandom] = 2;
+
+    return new Point(xRandom, yRandom);
+}
+
+function randomize()
+{
+    return Math.floor(Math.random() * (SIDE_SIZE - 1));
 }
