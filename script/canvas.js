@@ -396,7 +396,7 @@ function displayEndStmt()
         startButton.disabled = 'true';
         startButton.style.opacity = 0;
         stmtEl.removeChild(endStmt);
-        initialize();
+        setTimeout(initialize, 500);
     });
 
     let endStmt = document.createElement('p'),
